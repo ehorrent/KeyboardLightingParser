@@ -48,16 +48,18 @@ let main argv =
     "red, green"
   ]
 
-  // Parse
-  let parseResult = parse entry3
-
-  // Display
-  displayResult parseResult |> ignore
-  
-  // Return error code if necessary
-  match parseResult with
-  | Ok _ -> 0
-  | Error _ -> 1
+  match argv |> Array.truncate 1 with
+    | [|filename|] -> 
+      let parseResult = parsefile filename
+      displayResult parseResult |> ignore
+      
+      // Return error code if necessary
+      match parseResult with
+      | Ok _ -> 0
+      | Error _ -> 1
+    | _ ->
+      Console.WriteLine("Please provide an input file as argument")
+      1
 
   (*
   match parseColors ["Red"; "Yellow"; "3232"; "Blue"] with
@@ -72,10 +74,5 @@ let main argv =
   *)
   // We only check the first argument
  (*
-  match argv |> Array.truncate 1 with
-  | [|filename|] -> 
-    parseAndDisplayResult filename
-  | _ ->
-    Console.WriteLine("Please provide an input file")
-    1
+  
   *)

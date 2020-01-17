@@ -5,17 +5,15 @@ open System
 open System.IO
 open Utils
 
-// Models
-type LineTokens = string list
+// Public models
 type Color = Green | Blue | Red | Yellow | Orange
-type Effect = Static | Wave | Disco
 
 type KeyConfig = 
   | Static of code: string * color: Color
   | Wave of code: string * colors: Color list
   | Disco of code: string * color1: Color * color2: Color * color3: Color
 
-  member self.KeyCode() = 
+  member self.Key() = 
     match self with
     | Static (code, _) -> code
     | Wave (code, _) -> code
@@ -23,8 +21,12 @@ type KeyConfig =
 
 type ParseResult = Result<KeyConfig list,string>
 
+// Private models
+type private LineTokens = string list
+type private Effect = Static | Wave | Disco
+
 // Parse all supposed keys from a line input
-let parseKeys (keysLine:LineTokens) =
+let private parseKeys (keysLine:LineTokens) =
   let rec _parseKeys (keysLine:LineTokens) =
     match keysLine with
     | keyCode :: rest ->
@@ -38,7 +40,7 @@ let parseKeys (keysLine:LineTokens) =
   | Error e -> Error e
 
 // Parse all supposed effects from a line input
-let parseEffects (effectLine:LineTokens) =
+let private parseEffects (effectLine:LineTokens) =
   if 1 = effectLine.Length then
     match effectLine.Head with
     | "static" -> Ok Effect.Static
@@ -49,7 +51,7 @@ let parseEffects (effectLine:LineTokens) =
     Error ("INVALID: Only one effect expected by line : " + String.Join("/ ", effectLine))
 
 // Parse all supposed colors from a line input
-let parseColors (colorsLine:LineTokens) =
+let private parseColors (colorsLine:LineTokens) =
   let rec _parseColors (colorsLine:LineTokens) (acc : Color list) =
     match colorsLine with
     | "green" :: rest -> _parseColors rest (Green::acc)
@@ -63,7 +65,7 @@ let parseColors (colorsLine:LineTokens) =
   _parseColors colorsLine []
 
 // Parse a supposed effect from 3 input lines
-let parseEffect (keysLine:LineTokens) (effectLine:LineTokens) (colorsLine:LineTokens) =
+let private parseEffect (keysLine:LineTokens) (effectLine:LineTokens) (colorsLine:LineTokens) =
   match parseKeys keysLine with 
   | Error e -> Error e
   | Ok keys ->
@@ -73,29 +75,29 @@ let parseEffect (keysLine:LineTokens) (effectLine:LineTokens) (colorsLine:LineTo
     | Ok Effect.Static ->
       match parseColors colorsLine with
       | Error e -> Error e
-      | Ok [color] -> keys |> List.map (fun keyCode -> Static(keyCode, color)) |> Ok
+      | Ok [color] -> keys |> List.map (fun keyCode -> KeyConfig.Static(keyCode, color)) |> Ok
       | Ok colors -> Error ("INVALID: Static effects are single color only : " + String.Join(" / ", colors))
     // We are parsing a wave effect
     | Ok Effect.Wave ->
       match parseColors colorsLine with
       | Error e -> Error e 
-      | Ok colors -> keys |> List.map (fun keyCode -> Wave(keyCode, colors)) |> Ok
+      | Ok colors -> keys |> List.map (fun keyCode -> KeyConfig.Wave(keyCode, colors)) |> Ok
     // We are parsing a disco effect
     | Ok Effect.Disco ->
       match parseColors colorsLine with
       | Error e -> Error e 
-      | Ok (color1 :: color2 :: [color3]) -> keys |> List.map (fun keyCode -> Disco(keyCode, color1, color2, color3)) |> Ok
+      | Ok (color1 :: color2 :: [color3]) -> keys |> List.map (fun keyCode -> KeyConfig.Disco(keyCode, color1, color2, color3)) |> Ok
       | Ok colors -> Error ("INVALID: Disco effects need 3 colors : " + String.Join(" / ", colors))
 
 // Parse all the input tokens and transform them into an ordered KeyConfig list
-let parseTokens (tokens: LineTokens list) =
+let private parseTokens (tokens: LineTokens list) =
   // This dictionary will cache all the key settings
   let allKeyConfigs = new Dictionary<string, KeyConfig>()
 
   // Add key configs to the cache
   let addKeyConfigs (keyConfigs:KeyConfig list) =
     for keyConfig in keyConfigs do
-      let keyCode = keyConfig.KeyCode()
+      let keyCode = keyConfig.Key()
       if (allKeyConfigs.ContainsKey(keyCode)) then
         allKeyConfigs.Remove(keyCode) |> ignore
       allKeyConfigs.Add(keyCode, keyConfig)
@@ -117,22 +119,23 @@ let parseTokens (tokens: LineTokens list) =
         // We order the key configs items
         allKeyConfigs 
         |> select (fun keyValue -> keyValue.Value)
-        |> orderBy (fun keyConfig -> keyConfig.KeyCode()) 
+        |> orderBy (fun keyConfig -> keyConfig.Key()) 
         |> List.ofSeq
         |> Ok
 
   _parseEffects tokens
 
 // Clean empty tokens, apply lower case
-let cleanInputAndReverse (inputConfig: string list) =
+let private cleanInputAndReverse (inputConfig: string list) =
   inputConfig
-  |> List.map (fun inputLine ->
-        inputLine.ToLower()
-        |> regex(",").Split
-        |> Array.map (fun token -> token.Trim())
-        |> Array.filter (String.IsNullOrWhiteSpace >> not)
-        |> Array.toList
-      )
+  |> List.map (
+    fun inputLine ->
+      inputLine.ToLower()
+      |> regex(",").Split
+      |> Array.map (fun token -> token.Trim())
+      |> Array.filter (String.IsNullOrWhiteSpace >> not)
+      |> Array.toList
+    )
 
 // Parse lines from a config file
 let parse (inputConfig: string list) =
