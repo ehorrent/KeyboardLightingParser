@@ -37,7 +37,7 @@ dotnet run {your_input_filename}
 dotnet run .\resources\entry1.txt
 ```
 
-Here is the command to execute tests:
+Here is the command to execute the tests:
 
 ```powershell
 cd src\KeyboardLightingParserTests
