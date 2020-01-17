@@ -62,7 +62,7 @@ let private parseColors (colorsLine:InputLineTokens) =
   let rec _parseColors (colorsLine:InputLineTokens) (acc : Color list) =
     // Transform into typed colors
     match colorsLine with
-    | "green" :: rest -> _parseColors rest (Blue::acc)
+    | "green" :: rest -> _parseColors rest (Green::acc)
     | "blue" :: rest -> _parseColors rest (Blue::acc)
     | "red" :: rest -> _parseColors rest (Red::acc)
     | "yellow" :: rest -> _parseColors rest (Yellow::acc)
