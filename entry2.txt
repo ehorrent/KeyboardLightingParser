@@ -1,0 +1,12 @@
+a, b, c, d
+static
+green
+a, t, v
+static
+red
+d, e, f
+wave
+red, blue
+t, u, v
+disco
+red, green, orange
