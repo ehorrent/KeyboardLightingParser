@@ -1,2 +1,4 @@
+.ionide/
+.vs/
 obj/
 bin/
