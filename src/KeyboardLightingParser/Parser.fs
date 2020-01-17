@@ -5,7 +5,8 @@ open System
 open System.IO
 open Utils
 
-// Public models
+// -------------------------------------------------------------------------------------
+// Public parser models
 type Color = Green | Blue | Red | Yellow | Orange
 
 type KeyConfig = 
@@ -21,14 +22,19 @@ type KeyConfig =
 
 type ParseResult = Result<KeyConfig list,string>
 
+// -------------------------------------------------------------------------------------
 // Private models
-type private LineTokens = string list
+
+type private InputLineTokens = string list
 type private Effect = Static | Wave | Disco
 
-// Parse all supposed keys from a line input
-let private parseKeys (keysLine:LineTokens) =
-  let rec _parseKeys (keysLine:LineTokens) =
-    match keysLine with
+// -------------------------------------------------------------------------------------
+// Private functions
+
+/// Parse all supposed keys from a line input.
+let private parseKeys (keysLine:InputLineTokens) =
+  let rec _parseKeys (tokens:InputLineTokens) =
+    match tokens with
     | keyCode :: rest ->
       match regex(@"[A-Za-z]").IsMatch(keyCode) with
       | true -> _parseKeys rest
@@ -39,9 +45,10 @@ let private parseKeys (keysLine:LineTokens) =
   | Ok _ -> Ok keysLine
   | Error e -> Error e
 
-// Parse all supposed effects from a line input
-let private parseEffects (effectLine:LineTokens) =
+/// Parse all supposed effects from a line.
+let private parseEffects (effectLine:InputLineTokens) =
   if 1 = effectLine.Length then
+    // Transform into a typed effect
     match effectLine.Head with
     | "static" -> Ok Effect.Static
     | "wave" -> Ok Effect.Wave
@@ -50,11 +57,12 @@ let private parseEffects (effectLine:LineTokens) =
   else
     Error ("INVALID: Only one effect expected by line : " + String.Join("/ ", effectLine))
 
-// Parse all supposed colors from a line input
-let private parseColors (colorsLine:LineTokens) =
-  let rec _parseColors (colorsLine:LineTokens) (acc : Color list) =
+/// Parse all supposed colors from a line.
+let private parseColors (colorsLine:InputLineTokens) =
+  let rec _parseColors (colorsLine:InputLineTokens) (acc : Color list) =
+    // Transform into typed colors
     match colorsLine with
-    | "green" :: rest -> _parseColors rest (Green::acc)
+    | "green" :: rest -> _parseColors rest (Blue::acc)
     | "blue" :: rest -> _parseColors rest (Blue::acc)
     | "red" :: rest -> _parseColors rest (Red::acc)
     | "yellow" :: rest -> _parseColors rest (Yellow::acc)
@@ -64,8 +72,9 @@ let private parseColors (colorsLine:LineTokens) =
 
   _parseColors colorsLine []
 
-// Parse a supposed effect from 3 input lines
-let private parseEffect (keysLine:LineTokens) (effectLine:LineTokens) (colorsLine:LineTokens) =
+/// Parse a supposed effect from 3 lines.
+/// Check the constraints for each effect type (Static / Wave / Disco).
+let private parseEffect (keysLine:InputLineTokens) (effectLine:InputLineTokens) (colorsLine:InputLineTokens) =
   match parseKeys keysLine with 
   | Error e -> Error e
   | Ok keys ->
@@ -89,12 +98,13 @@ let private parseEffect (keysLine:LineTokens) (effectLine:LineTokens) (colorsLin
       | Ok (color1 :: color2 :: [color3]) -> keys |> List.map (fun keyCode -> KeyConfig.Disco(keyCode, color1, color2, color3)) |> Ok
       | Ok colors -> Error ("INVALID: Disco effects need 3 colors : " + String.Join(" / ", colors))
 
-// Parse all the input tokens and transform them into an ordered KeyConfig list
-let private parseTokens (tokens: LineTokens list) =
-  // This dictionary will cache all the key settings
+/// Parse all the input tokens and transform them into an ordered KeyConfig list.
+/// Use a mutable dictionary internally to be more efficient.
+let private parseTokens (tokens: InputLineTokens list) =
+  /// This dictionary will cache all the key settings
   let allKeyConfigs = new Dictionary<string, KeyConfig>()
 
-  // Add key configs to the cache
+  /// Helper function to add key configs to the cache
   let addKeyConfigs (keyConfigs:KeyConfig list) =
     for keyConfig in keyConfigs do
       let keyCode = keyConfig.Key()
@@ -102,9 +112,10 @@ let private parseTokens (tokens: LineTokens list) =
         allKeyConfigs.Remove(keyCode) |> ignore
       allKeyConfigs.Add(keyCode, keyConfig)
 
-  let rec _parseEffects (tokens: LineTokens list) =
-    // Read tokens by 3 (color / effect / keys)
-    match tokens with
+  /// Recursive function to parse all the lines
+  let rec _parseEffects (allTokens: InputLineTokens list) =
+    match allTokens with
+    // Read tokens by 3 [keys / effect / color]
     | keysLine :: effectLine :: colorsLine :: rest ->
         match parseEffect keysLine effectLine colorsLine with
         | Ok keyConfigs ->
@@ -115,8 +126,8 @@ let private parseTokens (tokens: LineTokens list) =
     | head :: rest ->
         Error "INVALID: Missing lines to complete the config"
     | [] ->
-        // Convert back the mutable dictionary into an immutable ordered list
-        // We order the key configs items
+        // End of the lines, we convert back the mutable dictionary into an immutable ordered list.
+        // We also order the key configs items.
         allKeyConfigs 
         |> select (fun keyValue -> keyValue.Value)
         |> orderBy (fun keyConfig -> keyConfig.Key()) 
@@ -125,8 +136,10 @@ let private parseTokens (tokens: LineTokens list) =
 
   _parseEffects tokens
 
-// Clean empty tokens, apply lower case
-let private cleanInputAndReverse (inputConfig: string list) =
+/// Transform the input into "clean" tokens:
+/// - remove spaces and empty lines
+/// - apply lower case
+let private tokenize (inputConfig: string list) =
   inputConfig
   |> List.map (
     fun inputLine ->
@@ -137,12 +150,16 @@ let private cleanInputAndReverse (inputConfig: string list) =
       |> Array.toList
     )
 
-// Parse lines from a config file
+// -------------------------------------------------------------------------------------
+// Public functions
+
+/// Parse lines containing a keyboard lighting configuration.
 let parse (inputConfig: string list) =
-  cleanInputAndReverse inputConfig
+  inputConfig
+  |> tokenize 
   |> parseTokens
 
-// Parse a file
+/// Parse a file containing keyboard lighting configuration.
 let parsefile filename =
   match File.Exists filename with
   | true -> parse (File.ReadAllLines filename |> Array.toList)

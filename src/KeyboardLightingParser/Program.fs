@@ -1,7 +1,7 @@
 ﻿open System
 open Parser
 
-// Display the result of the parsing
+/// Display the result of the parsing
 let displayResult (parseResult:ParseResult) = 
   match parseResult with
   | Error e -> Console.WriteLine e
