@@ -1,8 +1,9 @@
 ﻿open System
 open Parser
 
-let displayResult (result:ParseResult) = 
-  match result with
+// Display the result of the parsing
+let displayResult (parseResult:ParseResult) = 
+  match parseResult with
   | Error e -> Console.WriteLine e
   | Ok keyConfigs -> 
     for keyConfig in keyConfigs do
@@ -20,7 +21,23 @@ let displayResult (result:ParseResult) =
 
 [<EntryPoint>]
 let main argv =
+  match argv |> Array.truncate 1 with
+    | [|filename|] -> 
+      // Parse the file
+      let parseResult = parsefile filename
 
+      // Display the result
+      displayResult parseResult
+
+      // Return corresponding code
+      match parseResult with
+      | Ok _ -> 0
+      | Error _ -> 1
+    | _ ->
+      Console.WriteLine("ERROR: Please provide an input file as argument")
+      1
+
+  (*
   let entry1 = [
     "a, b, c"
     "wave"
@@ -48,20 +65,6 @@ let main argv =
     "red, green"
   ]
 
-  match argv |> Array.truncate 1 with
-    | [|filename|] -> 
-      let parseResult = parsefile filename
-      displayResult parseResult |> ignore
-      
-      // Return error code if necessary
-      match parseResult with
-      | Ok _ -> 0
-      | Error _ -> 1
-    | _ ->
-      Console.WriteLine("Please provide an input file as argument")
-      1
-
-  (*
   match parseColors ["Red"; "Yellow"; "3232"; "Blue"] with
   | Ok _ -> Console.WriteLine "Ok"
   | Error e -> Console.WriteLine e
