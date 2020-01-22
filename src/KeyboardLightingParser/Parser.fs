@@ -70,7 +70,10 @@ let private parseColors (colorsLine:InputLineTokens) =
     | invalidColor :: rest -> Error ("INVALID: Invalid color : " + invalidColor)
     | [] -> Ok acc
 
-  _parseColors colorsLine []
+  let parseResult = _parseColors colorsLine []
+  match parseResult with
+  | Ok colors -> colors |> List.rev |> Ok
+  | Error _ -> parseResult
 
 /// Parse a supposed effect from 3 lines.
 /// Check the constraints for each effect type (Static / Wave / Disco).
