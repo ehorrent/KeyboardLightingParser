@@ -1,0 +1,6 @@
+a
+wave
+green, red
+a
+static
+green
